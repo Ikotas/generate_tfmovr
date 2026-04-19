@@ -1,6 +1,6 @@
-<p>
+<h2>
     <strong>generate_tfmovr v1.0 by Ikotas</strong>
-</p>
+</h2>
 <p>
     <strong>Description</strong>
 </p>
@@ -229,9 +229,9 @@
 <p>
     --------------------------------------------------------------------------------
 </p>
-<p>
+<h2>
     <strong>convert_tfmovr2se.bat v1.0 by Ikotas</strong>
-</p>
+</h2>
 <p>
     <strong>Description</strong>
 </p>
