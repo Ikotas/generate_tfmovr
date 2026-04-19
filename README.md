@@ -15,7 +15,7 @@
         Sources telecined from 23.976 fps to 29.97 fps.
     </li>
     <li>
-        Live-action and CG animation.
+        Live-action and CG animation.<br>
         <i>*Note: Hand-drawn (cel) animation is not supported as its irregular cycles are difficult to analyze.</i>
     </li>
 </ul>
@@ -28,7 +28,8 @@
     </li>
     <li>
         Recommended TFM settings for output:<br>
-        <code>TFM(mode=0,pp=1,slow=2,micmatching=0,output="x:\path\filename.tfm")</code>
+        <code>TFM(mode=0,pp=1,slow=2,micmatching=0,output="x:\path\filename.tfm")</code><br>
+        <i>*Note: pp=1 is required.</i>
     </li>
 </ul>
 <p>
@@ -213,8 +214,7 @@
     <code>TFM(mode=0,pp=3,MI=200,clip2=deinted,ovr="xxxxx.tfmovr")</code>
 </p>
 <p>
-    <i>*Note: Only for the pcccp pattern, the first frame may be striped.</i><br>
-    <i>Since this is a scene change frame, MI=256 might be acceptable.</i>
+    <i>*Note: Only for the pcccp pattern, the first frame may be striped. Since this is a scene change frame, MI=256 might be acceptable.</i>
 </p>
 <p>
     <strong>For sources with hardsubs:</strong>
