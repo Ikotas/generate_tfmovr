@@ -1,11 +1,12 @@
 <h2>
-    <strong>generate_tfmovr v1.0 by Ikotas</strong>
+    <strong>generate_tfmovr.exe</strong>
 </h2>
 <p>
     <strong>Description</strong>
 </p>
 <p>
-    This tool processes and cleans up TFM output files. It analyzes telecine (interlace) cycles and corrects them into consistent, clean patterns. By eliminating incorrect match code (c/p) detections, it enables high-precision deinterlacing.
+    This tool processes and cleans up TFM output files. It analyzes telecine (interlace) cycles and corrects them into consistent, clean patterns.<br>
+    By eliminating incorrect match code (c/p) detections, it enables high-precision deinterlacing.
 </p>
 <p>
     <strong>Target Sources</strong>
@@ -75,7 +76,8 @@
         <strong>Default:</strong> 6
     </li>
     <li>
-        <strong>Details:</strong> Triggered when a new pattern candidate achieves a <strong>Strict Match</strong> (all 5 frames match the pattern) in 6 or more groups out of 10 (within a 50-frame look-ahead). When this threshold is met, the tool forces a transition even if the current cycle still meets maintenance conditions.
+        <strong>Details:</strong> Triggered when a new pattern candidate achieves a <strong>Strict Match</strong> (all 5 frames match the pattern) in 6 or more groups out of 10 (within a 50-frame look-ahead).<br>
+        When this threshold is met, the tool forces a transition even if the current cycle still meets maintenance conditions.
     </li>
     <li class="ck-list-marker-bold">
         <strong>Adjustment:</strong>
@@ -125,7 +127,8 @@
         <strong>Default:</strong> 4
     </li>
     <li>
-        <strong>Details:</strong> Used when the current cycle score falls below <code>-m</code> (collapse state). If a new candidate has a <strong>Strict Match score of 4 or higher</strong> out of 10, it is adopted as the new starting point.
+        <strong>Details:</strong> Used when the current cycle score falls below <code>-m</code> (collapse state).<br>
+        If a new candidate has a <strong>Strict Match score of 4 or higher</strong> out of 10, it is adopted as the new starting point.
     </li>
     <li class="ck-list-marker-bold">
         <strong>Adjustment:</strong>
@@ -230,7 +233,7 @@
     --------------------------------------------------------------------------------
 </p>
 <h2>
-    <strong>convert_tfmovr2se.bat v1.0 by Ikotas</strong>
+    <strong>convert_tfmovr2se.bat</strong>
 </h2>
 <p>
     <strong>Description</strong>
