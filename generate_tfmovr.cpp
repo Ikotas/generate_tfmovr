@@ -88,9 +88,9 @@ static bool IsProgressiveSection(int start, const vector<char>& frames) {
 }
 
 static void PrintUsage() {
-    cout << "------------------------------" << endl;
-    cout << "generate_tfmovr v1.0 by Ikotas" << endl;
-    cout << "------------------------------" << endl;
+    cout << "--------------------------------" << endl;
+    cout << "generate_tfmovr v1.0.1 by Ikotas" << endl;
+    cout << "--------------------------------" << endl;
     cout << "Usage: generate_tfmovr.exe [options] TFM_output_file(*.tfm)" << endl << endl;
     cout << "Options:" << endl;
     cout << "  -d <num>  dominantTh (Default: 6)" << endl;
@@ -133,11 +133,11 @@ int main(int argc, char* argv[]) {
 
     fs::path outP;
     if (outPathStr.empty()) {
-        outP = tfmP; outP.replace_extension(".iovrlist");
+        outP = tfmP; outP.replace_extension(".tfmovr");
     }
     else {
         outP = outPathStr;
-        if (!outP.has_extension()) outP.replace_extension(".iovrlist");
+        if (!outP.has_extension()) outP.replace_extension(".tfmovr");
     }
 
     vector<char> frames; ifstream tfmFile(tfmP); string line;
@@ -145,9 +145,9 @@ int main(int argc, char* argv[]) {
     while (getline(tfmFile, line)) {
         if (line.empty() || line == "#") continue;
         stringstream ss(line); int fIdx; char type;
-        if (ss >> fIdx >> type) {
+        if (ss >> fIdx >> type && fIdx >= 0) {
             if (static_cast<size_t>(fIdx) >= frames.size()) frames.resize(static_cast<size_t>(fIdx) + 1, ' ');
-            frames[static_cast<size_t>(fIdx)] = type;
+            frames[fIdx] = type;
         }
     }
 
@@ -179,20 +179,24 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        bool shouldTransition = false;
-        if (bestNewCount >= dominantTh) shouldTransition = true;
-        else if (oldCore < maintainTh && bestNewCount >= adoptionTh) shouldTransition = true;
-        else if (bestNewConsecutive >= consecutTh) shouldTransition = true;
+        bool shouldTransition = (bestNewCount >= dominantTh) ||
+            (oldCore < maintainTh && bestNewCount >= adoptionTh) ||
+            (bestNewConsecutive >= consecutTh);
 
         if (shouldTransition && bestNewID != lastID) {
             int x = currentFrame;
-            while (static_cast<size_t>(x) < static_cast<size_t>(currentFrame) + 50 && static_cast<size_t>(x) < frames.size() - 5) {
-                if (MatchStrict(x, frames, bestNewID)) break;
+            while (static_cast<size_t>(x) + 5 <= frames.size()) {
+                if (MatchStrict(x, frames, bestNewID)) {
+                    bool selfCollision = (!lastID.is_c && lastID.p_pos[static_cast<size_t>(x) % 5] && frames[static_cast<size_t>(x)] == 'p');
+                    if (!selfCollision) break;
+                }
                 x++;
             }
-            while (x > 0 && x > currentFrame - 50) {
+            int xLimit = (currentFrame > 50) ? currentFrame - 50 : 0;
+            while (x > 0 && x > xLimit) {
                 if (MatchStrict(x - 1, frames, bestNewID)) {
-                    if (!lastID.is_c && lastID.p_pos[static_cast<size_t>(x - 1) % 5] && frames[static_cast<size_t>(x - 1)] == 'p') break;
+                    bool prevCollision = (!lastID.is_c && lastID.p_pos[static_cast<size_t>(x - 1) % 5] && frames[static_cast<size_t>(x - 1)] == 'p');
+                    if (prevCollision) break;
                     x--;
                 }
                 else break;
@@ -203,9 +207,9 @@ int main(int argc, char* argv[]) {
             lastID = bestNewID; currentFrame = x + 10;
         }
         else if (IsProgressiveSection(currentFrame, frames) && !lastID.is_c) {
-            int x = currentFrame;
-            results.push_back({ x, "c" });
-            lastID = GetIdentity("c", x); currentFrame = x + 150;
+            results.push_back({ currentFrame, "c" });
+            lastID = GetIdentity("c", currentFrame);
+            currentFrame += 150;
         }
         else {
             currentFrame++;
@@ -218,8 +222,6 @@ int main(int argc, char* argv[]) {
         int end = (i + 1 < results.size()) ? results[i + 1].first - 1 : 0;
         outFile << start << "," << end << " " << results[i].second << endl;
     }
-
     cout << "Successfully generated: " << outP.filename().string() << " (" << results.size() << " entries)" << endl;
-
     return 0;
 }
