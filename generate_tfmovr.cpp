@@ -87,19 +87,23 @@ static bool IsProgressiveSection(int start, const vector<char>& frames) {
     return (static_cast<long long>(cCount) * 100 / range) >= 95;
 }
 
-static void PrintUsage() {
-    cout << "--------------------------------" << endl;
-    cout << "generate_tfmovr v1.0.1 by Ikotas" << endl;
-    cout << "--------------------------------" << endl;
-    cout << "Usage: generate_tfmovr.exe [options] TFM_output_file(*.tfm)" << endl << endl;
-    cout << "Options:" << endl;
-    cout << "  -d <num>  dominantTh (Default: 6)" << endl;
-    cout << "  -m <num>  maintainTh (Default: 3)" << endl;
-    cout << "  -a <num>  adoptionTh (Default: 4)" << endl;
-    cout << "  -c <num>  consecutTh (Default: 2)" << endl;
-    cout << "  -o <file> output filename" << endl << endl;
+static void PrintTfmUsage() {
     cout << "The output of TFM is as follows:" << endl;
     cout << "TFM(mode=0,pp=1,slow=2,micmatching=0,output=\"x:\\path\\filename.tfm\")" << endl;
+}
+
+static void PrintUsage() {
+    cout << "--------------------------------" << endl;
+    cout << "generate_tfmovr v1.0.1b by Ikotas" << endl;
+    cout << "--------------------------------" << endl;
+    cout << "Usage: generate_tfmovr.exe [options] TFM_output_file" << endl << endl;
+    cout << "Options:" << endl;
+    cout << "  -d <int>  dominantTh (Default: 6)" << endl;
+    cout << "  -m <int>  maintainTh (Default: 3)" << endl;
+    cout << "  -a <int>  adoptionTh (Default: 4)" << endl;
+    cout << "  -c <int>  consecutTh (Default: 2)" << endl;
+    cout << "  -o <file> output filename" << endl << endl;
+    PrintTfmUsage();
 }
 
 int main(int argc, char* argv[]) {
@@ -121,13 +125,12 @@ int main(int argc, char* argv[]) {
     if (tfmPathStr.empty()) { PrintUsage(); return 1; }
 
     fs::path tfmP = tfmPathStr;
-    if (tfmP.extension() != ".tfm") tfmP.replace_extension(".tfm");
+    // if (tfmP.extension() != ".tfm") tfmP.replace_extension(".tfm");
 
     if (!fs::exists(tfmP)) {
         cout << "Error: " << tfmP.filename().string() << " not found." << endl;
         cout << "Make sure the output file for TFM is in the same folder." << endl << endl;
-        cout << "The output of TFM is as follows:" << endl;
-        cout << "TFM(mode=0,pp=1,slow=2,micmatching=0,output=\"x:\\path\\filename.tfm\")" << endl;
+        PrintTfmUsage();
         return 1;
     }
 
