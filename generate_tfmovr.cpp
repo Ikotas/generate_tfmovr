@@ -94,7 +94,7 @@ static void PrintTfmUsage() {
 
 static void PrintUsage() {
     cout << "--------------------------------" << endl;
-    cout << "generate_tfmovr v1.0.1b by Ikotas" << endl;
+    cout << "generate_tfmovr v1.0.2 by Ikotas" << endl;
     cout << "--------------------------------" << endl;
     cout << "Usage: generate_tfmovr.exe [options] TFM_output_file" << endl << endl;
     cout << "Options:" << endl;
@@ -144,14 +144,24 @@ int main(int argc, char* argv[]) {
     }
 
     vector<char> frames; ifstream tfmFile(tfmP); string line;
-    for (int i = 0; i < 3; ++i) getline(tfmFile, line);
+    bool hasValidData = false;
     while (getline(tfmFile, line)) {
-        if (line.empty() || line == "#") continue;
+        if (line.empty() || line[0] == '#') continue;
         stringstream ss(line); int fIdx; char type;
-        if (ss >> fIdx >> type && fIdx >= 0) {
-            if (static_cast<size_t>(fIdx) >= frames.size()) frames.resize(static_cast<size_t>(fIdx) + 1, ' ');
-            frames[fIdx] = type;
+        if (ss >> fIdx >> type && (type == 'c' || type == 'p' || type == 'h')) {
+            if (fIdx >= 0) {
+                if (static_cast<size_t>(fIdx) >= frames.size()) frames.resize(static_cast<size_t>(fIdx) + 1, ' ');
+                frames[static_cast<size_t>(fIdx)] = type;
+                hasValidData = true;
+            }
         }
+    }
+
+    if (!hasValidData) {
+        cout << "Error: " << tfmP.filename().string() << " does not contain valid TFM output data." << endl;
+        cout << "Please specify a correct TFM output file." << endl;
+        PrintTfmUsage();
+        return 1;
     }
 
     vector<pair<int, string>> results;
