@@ -79,12 +79,15 @@ static int CountConsecutive(int start, const vector<char>& frames, const CycleId
     return count;
 }
 
-static bool IsProgressiveSection(int start, const vector<char>& frames) {
-    int cCount = 0, range = 150;
-    if (static_cast<size_t>(start) + range > frames.size()) range = static_cast<int>(frames.size() - start);
-    if (range < 50) return false;
-    for (int i = 0; i < range; ++i) if (frames[static_cast<size_t>(start) + i] == 'c') cCount++;
-    return (static_cast<long long>(cCount) * 100 / range) >= 95;
+static bool IsProgressiveSection(int start, const vector<char>& frames, int threshold, int range) {
+    int cCount = 0;
+    int actualRange = range;
+    if (static_cast<size_t>(start) + static_cast<size_t>(actualRange) > frames.size())
+        actualRange = static_cast<int>(frames.size() - start);
+    if (actualRange < 50) return false;
+    for (int i = 0; i < actualRange; ++i)
+        if (frames[static_cast<size_t>(start) + i] == 'c') cCount++;
+    return (static_cast<long long>(cCount) * 100 / actualRange) >= threshold;
 }
 
 static void PrintTfmUsage() {
@@ -94,20 +97,22 @@ static void PrintTfmUsage() {
 
 static void PrintUsage() {
     cout << "--------------------------------" << endl;
-    cout << "generate_tfmovr v1.0.2 by Ikotas" << endl;
+    cout << "generate_tfmovr v1.1.0 by Ikotas" << endl;
     cout << "--------------------------------" << endl;
     cout << "Usage: generate_tfmovr.exe [options] TFM_output_file" << endl << endl;
     cout << "Options:" << endl;
     cout << "  -d <int>  dominantTh (Default: 6)" << endl;
     cout << "  -m <int>  maintainTh (Default: 3)" << endl;
-    cout << "  -a <int>  adoptionTh (Default: 4)" << endl;
-    cout << "  -c <int>  consecutTh (Default: 2)" << endl;
+    cout << "  -a <int>  adoptionTh (Default: 5)" << endl;
+    cout << "  -c <int>  consecutTh (Default: 3)" << endl;
+    cout << "  -p <int>  progressTh (Default: 95)" << endl;
+    cout << "  -r <int>  progressRa (Default: 150)" << endl;
     cout << "  -o <file> output filename" << endl << endl;
     PrintTfmUsage();
 }
 
 int main(int argc, char* argv[]) {
-    int dominantTh = 6, maintainTh = 3, adoptionTh = 4, consecutTh = 2;
+    int dominantTh = 6, maintainTh = 3, adoptionTh = 5, consecutTh = 3, progressTh = 95, progressRa = 150;
     string tfmPathStr = "", outPathStr = "";
 
     if (argc < 2) { PrintUsage(); return 1; }
@@ -118,6 +123,8 @@ int main(int argc, char* argv[]) {
         else if (arg == "-m" && i + 1 < argc) maintainTh = stoi(argv[++i]);
         else if (arg == "-a" && i + 1 < argc) adoptionTh = stoi(argv[++i]);
         else if (arg == "-c" && i + 1 < argc) consecutTh = stoi(argv[++i]);
+        else if (arg == "-p" && i + 1 < argc) progressTh = stoi(argv[++i]);
+        else if (arg == "-r" && i + 1 < argc) progressRa = stoi(argv[++i]);
         else if (arg == "-o" && i + 1 < argc) outPathStr = argv[++i];
         else if (arg[0] != '-') tfmPathStr = arg;
     }
@@ -128,8 +135,7 @@ int main(int argc, char* argv[]) {
     // if (tfmP.extension() != ".tfm") tfmP.replace_extension(".tfm");
 
     if (!fs::exists(tfmP)) {
-        cout << "Error: " << tfmP.filename().string() << " not found." << endl;
-        cout << "Make sure the output file for TFM is in the same folder." << endl << endl;
+        cout << "Error: " << tfmP.filename().string() << " not found." << endl << endl;
         PrintTfmUsage();
         return 1;
     }
@@ -173,56 +179,103 @@ int main(int argc, char* argv[]) {
             int score = CountStable(0, frames, GetIdentity(p, 0), true);
             if (score > maxC) { maxC = score; initP = p; }
         }
-        if (maxC < maintainTh && IsProgressiveSection(0, frames)) initP = "c";
+        if (maxC < maintainTh && IsProgressiveSection(0, frames, progressTh, progressRa)) initP = "c";
         results.push_back({ 0, initP });
         lastID = GetIdentity(initP, 0); currentFrame = 1;
     }
 
     while (static_cast<size_t>(currentFrame) + 10 <= frames.size()) {
+
+        if (!lastID.is_c && lastID.p_pos[static_cast<size_t>(currentFrame) % 5] &&
+            (frames[static_cast<size_t>(currentFrame)] == 'p' || frames[static_cast<size_t>(currentFrame)] == 'h')) {
+            currentFrame++;
+            continue;
+        }
+
         int oldCore = lastID.is_c ? 0 : CountStable(currentFrame, frames, lastID, false);
         CycleIdentity bestNewID;
-        int bestNewCount = -1, bestNewConsecutive = -1;
+        bool foundCandidate = false;
+        bool wasConsecutive = false;
 
         for (const auto& p : VALID_PATTERNS) {
             CycleIdentity candidate = GetIdentity(p, currentFrame);
-            int c = CountStable(currentFrame, frames, candidate, true);
-            int cons = CountConsecutive(currentFrame, frames, candidate);
-            if (cons > bestNewConsecutive || (cons == bestNewConsecutive && c > bestNewCount)) {
-                bestNewCount = c; bestNewConsecutive = cons; bestNewID = candidate;
+            if (candidate == lastID) continue;
+            if (CountStable(currentFrame, frames, candidate, true) >= dominantTh) {
+                bestNewID = candidate; foundCandidate = true; break;
+            }
+        }
+        if (!foundCandidate) {
+            for (const auto& p : VALID_PATTERNS) {
+                CycleIdentity candidate = GetIdentity(p, currentFrame);
+                if (candidate == lastID) continue;
+                if (CountConsecutive(currentFrame, frames, candidate) >= consecutTh) {
+                    bestNewID = candidate; foundCandidate = true; wasConsecutive = true; break;
+                }
             }
         }
 
-        bool shouldTransition = (bestNewCount >= dominantTh) ||
-            (oldCore < maintainTh && bestNewCount >= adoptionTh) ||
-            (bestNewConsecutive >= consecutTh);
-
-        if (shouldTransition && bestNewID != lastID) {
-            int x = currentFrame;
-            while (static_cast<size_t>(x) + 5 <= frames.size()) {
-                if (MatchStrict(x, frames, bestNewID)) {
-                    bool selfCollision = (!lastID.is_c && lastID.p_pos[static_cast<size_t>(x) % 5] && frames[static_cast<size_t>(x)] == 'p');
-                    if (!selfCollision) break;
+        if (!foundCandidate && oldCore < maintainTh) {
+            for (const auto& p : VALID_PATTERNS) {
+                CycleIdentity candidate = GetIdentity(p, currentFrame);
+                if (candidate == lastID) continue;
+                if (CountStable(currentFrame, frames, candidate, true) >= adoptionTh) {
+                    bestNewID = candidate; foundCandidate = true; break;
                 }
-                x++;
             }
-            int xLimit = (currentFrame > 50) ? currentFrame - 50 : 0;
-            while (x > 0 && x > xLimit) {
-                if (MatchStrict(x - 1, frames, bestNewID)) {
-                    bool prevCollision = (!lastID.is_c && lastID.p_pos[static_cast<size_t>(x - 1) % 5] && frames[static_cast<size_t>(x - 1)] == 'p');
-                    if (prevCollision) break;
-                    x--;
+        }
+
+        if (foundCandidate) {
+            int x = currentFrame;
+            if (wasConsecutive) {
+                if (!lastID.is_c) {
+                    int lastStart = results.back().first;
+                    int cycleEnd = lastStart + ((x - lastStart + 4) / 5) * 5;
+                    int lastActualP = -1;
+                    for (int i = x; i < cycleEnd; ++i) {
+                        if (static_cast<size_t>(i) >= frames.size()) break;
+                        if (lastID.p_pos[i % 5] && (frames[i] == 'p' || frames[i] == 'h')) {
+                            lastActualP = i;
+                        }
+                    }
+                    if (lastActualP != -1) {
+                        x = lastActualP + 1;
+                    }
                 }
-                else break;
+                while (static_cast<size_t>(x) < frames.size() && !lastID.is_c &&
+                    lastID.p_pos[static_cast<size_t>(x) % 5] &&
+                    (frames[static_cast<size_t>(x)] == 'p' || frames[static_cast<size_t>(x)] == 'h')) {
+                    x++;
+                }
+            }
+            else {
+                while (static_cast<size_t>(x) + 5 <= frames.size()) {
+                    if (MatchStrict(x, frames, bestNewID)) {
+                        bool selfCollision = (!lastID.is_c && lastID.p_pos[static_cast<size_t>(x) % 5] &&
+                            (frames[static_cast<size_t>(x)] == 'p' || frames[static_cast<size_t>(x)] == 'h'));
+                        if (!selfCollision) break;
+                    }
+                    x++;
+                }
+                int xLimit = (currentFrame > 50) ? currentFrame - 50 : 0;
+                while (x > 0 && x > xLimit) {
+                    if (MatchStrict(x - 1, frames, bestNewID)) {
+                        bool prevCollision = (!lastID.is_c && lastID.p_pos[static_cast<size_t>(x - 1) % 5] &&
+                            (frames[static_cast<size_t>(x - 1)] == 'p' || frames[static_cast<size_t>(x - 1)] == 'h'));
+                        if (prevCollision) break;
+                        x--;
+                    }
+                    else break;
+                }
             }
             string pat = "c";
             for (const auto& p : VALID_PATTERNS) if (GetIdentity(p, x) == bestNewID) { pat = p; break; }
             results.push_back({ x, pat });
             lastID = bestNewID; currentFrame = x + 10;
         }
-        else if (IsProgressiveSection(currentFrame, frames) && !lastID.is_c) {
+        else if (IsProgressiveSection(currentFrame, frames, progressTh, progressRa) && !lastID.is_c && !MatchCore(currentFrame, frames, lastID)) {
             results.push_back({ currentFrame, "c" });
             lastID = GetIdentity("c", currentFrame);
-            currentFrame += 150;
+            currentFrame += progressRa;
         }
         else {
             currentFrame++;
